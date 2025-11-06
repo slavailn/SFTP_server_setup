@@ -1,6 +1,6 @@
 # Read-Only SFTP with Chroot + Read-Only Bind Mount
 
-This guide sets up a **download-only SFTP** service that keeps big data under **`/mnt/bioinf_data`** (owned by you) and exposes it to collaborators via a tiny, **root-owned chroot** under **`/srv`** using a **read-only bind mount**.  
+This guide sets up a **download-only SFTP** service that keeps big data under **`PATH/TO/SFTP_DIR`** (owned by you) and exposes it to collaborators via a tiny, **root-owned chroot** under **`/srv`** using a **read-only bind mount**.  
 Example SFTP user: **`sftp_user`**.
 
 > **Why this design?**  
@@ -108,7 +108,7 @@ sudo chmod 755       /srv/sftp_chroot/$USER /srv/sftp_chroot/$USER/upload
 Create the admin-managed export folder (keep your ownership, e.g., user `slava`):
 
 ```bash
-sudo -u slava mkdir -p /mnt/bioinf_data/sftp_exports/$USER
+sudo -u <username> mkdir -p </path/to/sftp_dir/>sftp_exports/$USER
 ```
 
 You will place downloadable files in this folder.
@@ -120,14 +120,14 @@ You will place downloadable files in this folder.
 Bind the export folder into the chroot and remount **read-only**:
 
 ```bash
-sudo mount --bind /mnt/bioinf_data/sftp_exports/$USER /srv/sftp_chroot/$USER/upload
+sudo mount --bind </path/to/sftp_dir/>sftp_exports/$USER /srv/sftp_chroot/$USER/upload
 sudo mount -o remount,bind,ro /srv/sftp_chroot/$USER/upload
 ```
 
 Persist across reboots by adding **one line** to `/etc/fstab`:
 
 ```
-/mnt/bioinf_data/sftp_exports/sftp_user  /srv/sftp_chroot/sftp_user/upload  none  bind,ro  0  0
+</path/to/sftp_dir/>/sftp_exports/sftp_user  /srv/sftp_chroot/sftp_user/upload  none  bind,ro  0  0
 ```
 
 > Repeat an analogous line for each additional SFTP user.
@@ -167,22 +167,22 @@ sudo ufw enable
 
 ```bash
 # copy or move files into the export folder:
-cp /path/to/bigfile.tar.zst /mnt/bioinf_data/sftp_exports/sftp_user/
+cp /path/to/bigfile.tar.zst </path/to/sftp_dir/>sftp_exports/sftp_user/
 # or with progress:
-rsync -ah --progress /path/to/bigfile.tar.zst /mnt/bioinf_data/sftp_exports/sftp_user/
+rsync -ah --progress /path/to/bigfile.tar.zst </path/to/sftp_dir/>sftp_exports/sftp_user/
 # explicit read perms (belt & suspenders):
-chmod 644 /mnt/bioinf_data/sftp_exports/sftp_user/bigfile.tar.zst
+chmod 644 </path/to/sftp_dir/>sftp_exports/sftp_user/bigfile.tar.zst
 ```
 
 **Atomic publish (large files):**
 ```bash
-rsync -ah --partial --progress /path/to/bigfile.tar.zst   /mnt/bioinf_data/sftp_exports/sftp_user/.bigfile.tmp &&
-mv /mnt/bioinf_data/sftp_exports/sftp_user/.bigfile.tmp    /mnt/bioinf_data/sftp_exports/sftp_user/bigfile.tar.zst
+rsync -ah --partial --progress /path/to/bigfile.tar.zst   </path/to/sftp_dir/>/sftp_exports/sftp_user/.bigfile.tmp &&
+mv </path/to/sftp_dir/>/sftp_exports/sftp_user/.bigfile.tmp    </path/to/sftp_dir/>/sftp_exports/sftp_user/bigfile.tar.zst
 ```
 
 **Optional checksum for integrity:**
 ```bash
-(cd /mnt/bioinf_data/sftp_exports/sftp_user && sha256sum bigfile.tar.zst > bigfile.tar.zst.sha256)
+(cd </path/to/sftp_dir/>/sftp_exports/sftp_user && sha256sum bigfile.tar.zst > bigfile.tar.zst.sha256)
 ```
 
 ### Collaborator (download)
@@ -214,12 +214,12 @@ sudo chown root:root /srv/sftp_chroot/$USER /srv/sftp_chroot/$USER/upload
 sudo chmod 755       /srv/sftp_chroot/$USER /srv/sftp_chroot/$USER/upload
 
 # export source on big disk
-sudo -u slava mkdir -p /mnt/bioinf_data/sftp_exports/$USER
+sudo -u <username> mkdir -p </path/to/sftp_dir/>sftp_exports/$USER
 
 # read-only bind mount (+ persist)
-sudo mount --bind /mnt/bioinf_data/sftp_exports/$USER /srv/sftp_chroot/$USER/upload
+sudo mount --bind </path/to/sftp_dir/>/sftp_exports/$USER /srv/sftp_chroot/$USER/upload
 sudo mount -o remount,bind,ro /srv/sftp_chroot/$USER/upload
-echo "/mnt/bioinf_data/sftp_exports/$USER  /srv/sftp_chroot/$USER/upload  none  bind,ro  0  0" | sudo tee -a /etc/fstab
+echo "</path/to/sftp_dir/>/sftp_exports/$USER  /srv/sftp_chroot/$USER/upload  none  bind,ro  0  0" | sudo tee -a /etc/fstab
 ```
 
 ---
@@ -266,4 +266,4 @@ echo "/mnt/bioinf_data/sftp_exports/$USER  /srv/sftp_chroot/$USER/upload  none  
 
 ---
 
-**Done.** You now have a robust, read-only SFTP that serves large files from `/mnt/bioinf_data` via a minimal chroot under `/srv`.
+
